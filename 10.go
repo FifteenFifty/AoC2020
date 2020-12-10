@@ -107,6 +107,53 @@ func main() {
 86,
     }
 
+//    input = []int {
+//28,
+//33,
+//18,
+//42,
+//31,
+//14,
+//46,
+//20,
+//48,
+//47,
+//24,
+//23,
+//49,
+//45,
+//19,
+//38,
+//39,
+//11,
+//1,
+//32,
+//25,
+//35,
+//8,
+//17,
+//7,
+//9,
+//4,
+//2,
+//34,
+//10,
+//3,
+//    }
+
+//    input = []int {
+//16,
+//10,
+//15,
+//5,
+//1,
+//11,
+//7,
+//19,
+//6,
+//12,
+//4,
+//    }
 
     sort.Ints(input)
 
@@ -114,12 +161,15 @@ func main() {
     p2 := 0
 
     d1 := 0
+    d2 := 0
     d3 := 1
     prevJ := 0
 
     for _, jolts := range input {
       if jolts - prevJ == 1 {
         d1++
+      } else if jolts - prevJ == 2 {
+        d2++
       } else if jolts - prevJ == 3 {
         d3++
       }
@@ -127,6 +177,31 @@ func main() {
     }
 
     p1 = d1 * d3
+    memo := make(map[int]int)
+    p2 = combosInRange(input, len(input) - 1, memo)
 
     fmt.Printf("P1: %d, P2: %d\n", p1, p2)
+}
+
+func combosInRange(input []int, start int, memo map[int]int) int {
+  if m, ok := memo[start]; ok {
+    return m
+  }
+  combos := 0
+  if (input[start] <= 3) {
+    combos++
+  }
+
+  if start > 0 && input[start] - input[start - 1] <= 3 {
+    combos += combosInRange(input, start - 1, memo)
+  }
+  if start > 1 && input[start] - input[start - 2] <= 3 {
+    combos += combosInRange(input, start - 2, memo)
+  }
+  if start > 2 && input[start] - input[start - 3] <= 3 {
+    combos += combosInRange(input, start - 3, memo)
+  }
+
+  memo[start] = combos
+  return combos
 }
