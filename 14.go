@@ -562,10 +562,6 @@ mem[46256] = 1543619
 mem[58524] = 128793487
 mem[39996] = 2787`
 
-//input = `mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X
-//mem[8] = 11
-//mem[7] = 101
-//mem[8] = 0`
 
   p1 := P1(input)
   p2 := P2(input)
@@ -611,5 +607,47 @@ func P1 (input string) int {
 }
 
 func P2 (input string) int {
-  return 1
+  setMatcher := regexp.MustCompile("mask = ([10X]+)\n((?:mem\\[[0-9]+\\] = [0-9]+\n?)+)")
+  regMatcher := regexp.MustCompile("mem\\[([0-9]+)\\] = ([0-9]+)")
+
+  setMatches := setMatcher.FindAllStringSubmatch(input, -1)
+
+  result := make(map[int]int)
+
+  for _, setMatch := range setMatches {
+    mask      := setMatch[1]
+    registers := regMatcher.FindAllStringSubmatch(setMatch[2], -1)
+    for _, reg := range registers {
+      idx, _ := strconv.Atoi(reg[1])
+      val, _ := strconv.Atoi(reg[2])
+
+      var addresses []int
+      addresses = append(addresses, idx)
+
+      for pos, char := range mask {
+        shift := len(mask) - pos - 1
+        if char == '1' {
+          for mIndex, _ := range addresses {
+            addresses[mIndex] |= 1 << shift
+          }
+        } else if char == 'X' {
+          for mIndex, _ := range addresses {
+            addresses = append(addresses, addresses[mIndex] | 1 << shift)
+            addresses = append(addresses, addresses[mIndex] & ^(1 << shift))
+          }
+        }
+      }
+
+      for _, address := range addresses {
+        result[address] = val
+      }
+    }
+  }
+
+  ret := 0
+  for k, value := range result {
+    ret += value
+  }
+
+  return ret
 }
