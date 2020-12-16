@@ -270,6 +270,18 @@ nearby tickets:
 425,543,702,474,424,673,918,747,628,762,175,931,832,863,79,213,109,557,881,494
 606,789,514,465,893,339,315,494,314,921,944,477,724,920,856,150,733,932,897,415`
 
+//input = `class: 0-1 or 4-19
+//row: 0-5 or 8-19
+//seat: 0-13 or 16-19
+//
+//your ticket:
+//11,12,13
+//
+//nearby tickets:
+//3,9,18
+//15,1,5
+//5,14,9`
+
   matcher := regexp.MustCompile("(?s)(.*)\n\nyour ticket:\n(.*)\n\nnearby tickets:\n(.*)")
 
   matches := matcher.FindStringSubmatch(input)
@@ -315,6 +327,110 @@ func P1 (rules string, myTicket string, otherTickets string) int {
   return ret
 }
 
+type Rule struct {
+  name    string
+  start1  int
+  end1    int
+  start2  int
+  end2    int
+  columns map[int]bool
+  column  int
+}
+
 func P2 (rules string, myTicket string, otherTickets string) int {
-  return 1
+  ruleMatcher := regexp.MustCompile("(.*): ([0-9]+)-([0-9]+) or ([0-9]+)-([0-9]+)")
+
+  validNums   := make(map[int]bool)
+  parsedRules := []Rule {}
+  ret         := 1
+
+  for _, rule := range strings.Split(rules, "\n") {
+    ruleMatch := ruleMatcher.FindStringSubmatch(rule)
+
+    start1, _ := strconv.Atoi(ruleMatch[2])
+    end1,   _ := strconv.Atoi(ruleMatch[3])
+    start2, _ := strconv.Atoi(ruleMatch[4])
+    end2,   _ := strconv.Atoi(ruleMatch[5])
+
+    parsedRules = append(parsedRules, Rule { ruleMatch[1], start1, end1, start2, end2, make(map[int]bool), -1 })
+
+    for i := start1; i <= end1; i++ {
+      validNums[i] = true
+    }
+    for i := start2; i <= end2; i++ {
+      validNums[i] = true
+    }
+  }
+
+  validOtherTickets := [][]int {}
+
+  for _, ticket := range strings.Split(otherTickets, "\n") {
+    currentTicket := []int {}
+    valid         := true
+
+    for _, numStr := range strings.Split(ticket, ",") {
+      num, _ := strconv.Atoi(numStr)
+      _, ok := validNums[num]
+
+      if !ok {
+        valid = false
+        break
+      } else {
+        currentTicket = append(currentTicket, num)
+      }
+    }
+
+    if valid {
+      validOtherTickets = append(validOtherTickets, currentTicket)
+    }
+  }
+
+  for _, ticket := range validOtherTickets {
+    for col, val := range ticket {
+      for idx, parsedRule := range parsedRules {
+        if (val < parsedRule.start1 || val > parsedRule.end1) &&
+           (val < parsedRule.start2 || val > parsedRule.end2) {
+          parsedRules[idx].columns[col] = true
+        }
+      }
+    }
+  }
+
+  for {
+    missingAny := false
+
+    for idx, parsedRule := range parsedRules {
+      if len(parsedRule.columns) == len(validOtherTickets[0]) - 1 {
+        for i := 0; i < len(validOtherTickets[0]); i++ {
+          _, found:= parsedRule.columns[i]
+          if (!found) {
+            parsedRules[idx].column = i
+            for p, _ := range parsedRules {
+              parsedRules[p].columns[i] = true
+            }
+          }
+        }
+      }
+
+      if parsedRule.column == -1 {
+        missingAny = true
+      }
+    }
+
+    if !missingAny {
+      break
+    }
+  }
+
+  myTicketNumStrs := strings.Split(myTicket, ",")
+
+  for _, parsedRule := range parsedRules {
+    fmt.Printf("%s: %d\n", parsedRule.name, parsedRule.column)
+    if strings.Contains(parsedRule.name, "departure") {
+      val, _ := strconv.Atoi(myTicketNumStrs[parsedRule.column])
+      ret *= val
+    }
+  }
+
+  return ret
 }
