@@ -645,7 +645,7 @@ func P2 (input string) int {
   }
 
   ret := 0
-  for k, value := range result {
+  for _, value := range result {
     ret += value
   }
 
