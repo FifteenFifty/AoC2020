@@ -1737,6 +1737,7 @@ Tile 3691:
 .....#....
 ##.###...#`
 
+/*
   input = `Tile 2311:
 ..##.#..#.
 ##..#.....
@@ -1844,7 +1845,7 @@ Tile 3079:
 ..#.###...
 ..#.......
 ..#.###...`
-
+*/
 tiles := []Tile {}
 
   for _, tile := range strings.Split(input, "\n\n") {
@@ -1917,9 +1918,6 @@ func NewTile(spec string) Tile {
 
   tile.b = lastString
 
-  fmt.Println("MADE TILE")
-  PrintTile(tile)
-
   return tile
 }
 
@@ -1958,7 +1956,7 @@ func P1 (tiles []Tile) int {
 }
 
 func P2 (tiles []Tile) int {
-  ret := 1
+  ret := 0
 
   borderCounts := make(map[string]int)
 
@@ -2020,7 +2018,6 @@ func P2 (tiles []Tile) int {
         topBorder = ""
         continue
       } else {
-        fmt.Println("Found one")
         cornerIdx = idx
         break
       }
@@ -2037,7 +2034,6 @@ func P2 (tiles []Tile) int {
 
   for y := 0; y < len(grid); y++ {
     for x := 0; x < len(grid[y]); x++ {
-      PrintTile(grid[y][x])
       for dY := 0; dY < len(grid[y][x].data); dY++ {
         for dX := 0; dX < len(grid[y][x].data[dY]); dX++ {
           fpY := y * len(grid[0][0].data) + dY
@@ -2050,7 +2046,7 @@ func P2 (tiles []Tile) int {
   }
 
   for _, y := range fullPicture {
-    fmt.Println(y)
+    //TODO - find monsters & count non-monster hashes
   }
 
   return ret
@@ -2097,11 +2093,6 @@ func ArrangeTiles(tiles      []Tile,
       }
 
       for i, tile := range tiles {
-
-        if tile.id == 3079 {
-PrintTile(tile)
-        }
-
         tile = TryTile(tile, topBorder, leftBorder)
         if tile.id != 0 {
           // The tile fits
