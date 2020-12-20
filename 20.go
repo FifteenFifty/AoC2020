@@ -2045,11 +2045,16 @@ func P2 (tiles []Tile) int {
     }
   }
 
-  for _, y := range fullPicture {
-    //TODO - find monsters & count non-monster hashes
-  }
+  return MonsterCount(fullPicture)
+}
 
-  return ret
+func MonsterCount([][]string picture) int {
+  head := regexp.MustCompile("..................#.")
+  body := regexp.MustCompile("#....##....##....###")
+  head := regexp.MustCompile(".#..#..#..#..#..#...")
+  //TODO
+  //
+  return 1
 }
 
 func ArrangeTiles(tiles      []Tile,
