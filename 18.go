@@ -4,6 +4,7 @@ import (
     "fmt"
     "strconv"
     "strings"
+    "regexp"
 )
 
 func main() {
@@ -390,14 +391,14 @@ func P1 (input string) int {
   ret := 0
 
   for _, line := range strings.Split(input, "\n") {
-    v, _ := P1Calc(line, 0, 0)
+    v, _ := P1Calc(line, 0)
     ret += v
   }
 
   return ret
 }
 
-func P1Calc(input string, offset int, depth int) (int, int) {
+func P1Calc(input string, offset int) (int, int) {
   total   := 0
   current := 0
   op      := "+"
@@ -419,7 +420,7 @@ func P1Calc(input string, offset int, depth int) (int, int) {
       op = "*"
 
     case '(':
-      current, i = P1Calc(input, i + 1, depth + 1)
+      current, i = P1Calc(input, i + 1)
 
     case ')':
       total = Calc(total, op, current)
@@ -439,16 +440,79 @@ func P1Calc(input string, offset int, depth int) (int, int) {
 }
 
 func P2 (input string) int {
+  ret := 0
 
-  return 1
+  tokenRegex := regexp.MustCompile("(?:[0-9]+|[()+*])")
+
+  for _, line := range strings.Split(input, "\n") {
+    tokens := tokenRegex.FindAllString(line, -1)
+    v, _ := P2Calc(tokens, 0)
+    ret += v
+  }
+
+  return ret
+}
+
+func P2Calc(input []string, offset int) (int, int) {
+  stack   := []int {}
+  op      := ""
+  prevOp  := ""
+  total   := 1
+  end     := false
+  endIdx  := len(input)
+
+  for i := offset; i < len(input) && !end; i++ {
+    switch input[i] {
+    case "(":
+      v, end := P2Calc(input, i + 1)
+      stack  = append(stack, v)
+      i      = end
+      prevOp = op
+
+    case ")":
+      end    = true
+      endIdx = i
+      break
+
+    case "+":
+      op     = "+"
+
+    case "*":
+      op     = "*"
+
+    default:
+      prevOp = op
+      v, _ := strconv.Atoi(input[i])
+      stack = append(stack, v)
+    }
+
+    if prevOp == "+" && len(stack) > 1 {
+      // Pop the last 2 elements off the stack, sum them, and put them back
+      a := stack[len(stack) - 1]
+      b := stack[len(stack) - 2]
+      stack = stack[:len(stack) - 2]
+      stack = append(stack, a + b)
+      prevOp = ""
+    }
+
+  }
+
+  // Since we do addition at the time, we only have multiplication left
+  for _, v := range stack {
+    total *= v
+  }
+
+  return total, endIdx
 }
 
 func Calc(a int, op string, b int) int {
+  ret := 0
   if op == "+" {
-    return a + b
+    ret = a + b
   } else if a == 0 {
-    return b
+    ret = b
   } else {
-    return a * b
+    ret = a * b
   }
+  return ret
 }
