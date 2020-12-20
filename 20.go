@@ -1851,8 +1851,6 @@ tiles := []Tile {}
     tiles = append(tiles, NewTile(tile))
   }
 
-  fmt.Printf("There are %d tiles\n", len(tiles))
-
   p1 := P1(tiles)
   p2 := P2(tiles)
 
@@ -1865,6 +1863,7 @@ type Tile struct {
   r string
   b string
   l string
+  data [][]string
 }
 
 func Reverse(s string) string {
@@ -1886,11 +1885,19 @@ func NewTile(spec string) Tile {
 
   lastString := ""
 
-  for y , line := range strings.Split(spec, "\n") {
+  allLines := strings.Split(spec, "\n")
+  allLines = allLines[1:]
+
+  for y, line := range allLines {
     if y == 0 {
-      continue
-    } else if y == 1 {
       tile.t = line
+    }
+
+    if tile.data == nil {
+      tile.data = make([][]string, len(line) - 2)
+      for idx, _ := range tile.data {
+        tile.data[idx] = make([]string, len(line) - 2)
+      }
     }
 
     lastString = line
@@ -1901,10 +1908,17 @@ func NewTile(spec string) Tile {
       } else if x == len(line) - 1 {
         tile.r += string(val)
       }
+
+      if (y > 0 && x > 0 && y < len(allLines) - 1 && x < len(line) - 1) {
+        tile.data[y - 1][x - 1] = string(val)
+      }
     }
   }
 
   tile.b = lastString
+
+  fmt.Println("MADE TILE")
+  PrintTile(tile)
 
   return tile
 }
@@ -1960,7 +1974,8 @@ func P2 (tiles []Tile) int {
     borderCounts[Reverse(tile.l)]++
   }
 
-  var corner int
+  var corner Tile
+  cornerIdx := 0
   leftBorder := ""
   topBorder := ""
 
@@ -1998,14 +2013,45 @@ func P2 (tiles []Tile) int {
           topBorder = tile.l
         }
       }
-      corner = idx
-      break
+
+      corner = TryTile(tile, leftBorder, topBorder)
+      if corner.id == 0 {
+        leftBorder = ""
+        topBorder = ""
+        continue
+      } else {
+        fmt.Println("Found one")
+        cornerIdx = idx
+        break
+      }
     }
   }
 
-  grid := ArrangeTiles(tiles, corner, leftBorder, topBorder)
+  grid := ArrangeTiles(tiles, cornerIdx, leftBorder, topBorder)
 
-  fmt.Println(grid)
+  // Put the data into the big picture
+  fullPicture := make([][]string, len(grid) * len(grid[0][0].data))
+  for i, _ := range fullPicture {
+    fullPicture[i] = make([]string, len(fullPicture))
+  }
+
+  for y := 0; y < len(grid); y++ {
+    for x := 0; x < len(grid[y]); x++ {
+      PrintTile(grid[y][x])
+      for dY := 0; dY < len(grid[y][x].data); dY++ {
+        for dX := 0; dX < len(grid[y][x].data[dY]); dX++ {
+          fpY := y * len(grid[0][0].data) + dY
+          fpX := x * len(grid[0][0].data) + dX
+
+          fullPicture[fpY][fpX] = grid[y][x].data[dY][dX]
+        }
+      }
+    }
+  }
+
+  for _, y := range fullPicture {
+    fmt.Println(y)
+  }
 
   return ret
 }
@@ -2023,10 +2069,7 @@ func ArrangeTiles(tiles      []Tile,
   }
 
   // Rotate the corner tile so that it fits
-  cornerTile := TryTile(tiles[cornerIdx], topBorder, leftBorder)
-  if cornerTile.id == 0 {
-    cornerTile = TryTile(tiles[cornerIdx], Reverse(topBorder), leftBorder)
-  }
+  cornerTile := TryTile(tiles[cornerIdx], leftBorder, topBorder)
 
   // Put in the top left tile
   grid[0][0] = cornerTile
@@ -2054,6 +2097,11 @@ func ArrangeTiles(tiles      []Tile,
       }
 
       for i, tile := range tiles {
+
+        if tile.id == 3079 {
+PrintTile(tile)
+        }
+
         tile = TryTile(tile, topBorder, leftBorder)
         if tile.id != 0 {
           // The tile fits
@@ -2068,7 +2116,6 @@ func ArrangeTiles(tiles      []Tile,
     }
   }
 
-
   return grid
 }
 
@@ -2078,7 +2125,6 @@ func Remove(tiles []Tile, idx int) []Tile {
 }
 
 func TryTile(tile Tile, top string, left string) Tile {
-
   if TileMatch(tile, top, left) {
     return tile
   }
@@ -2093,11 +2139,20 @@ func TryTile(tile Tile, top string, left string) Tile {
       }
       for rotate := 0; rotate < 4; rotate++ {
         tile = Rotate(tile)
-
         if TileMatch(tile, top, left) {
           return tile
         }
       }
+
+      if flipH == 1 {
+        // Put the tile's data back (slice is a reference type)
+        tile = FlipH(tile)
+      }
+    }
+
+    if flipV == 1 {
+      // Put the tile's data back (slice is a reference type)
+      tile = FlipV(tile)
     }
   }
 
@@ -2111,6 +2166,12 @@ func FlipV(tile Tile) Tile {
   tile.l = Reverse(tile.l)
   tile.r = Reverse(tile.r)
 
+  // Flip the data as well
+  for i := 0; i < len(tile.data) / 2; i++ {
+    opp := len(tile.data) - i - 1
+    tile.data[i], tile.data[opp] = tile.data[opp], tile.data[i]
+  }
+
   return tile
 }
 
@@ -2120,6 +2181,14 @@ func FlipH(tile Tile) Tile {
   tile.r = tmp
   tile.t = Reverse(tile.t)
   tile.b = Reverse(tile.b)
+
+  // Flip the data as well
+  for y := 0; y < len(tile.data); y++ {
+    for x := 0; x < len(tile.data[y]) / 2; x++ {
+      opp := len(tile.data[y]) - x - 1
+      tile.data[y][x], tile.data[y][opp] = tile.data[y][opp], tile.data[y][x]
+    }
+  }
 
   return tile
 }
@@ -2131,10 +2200,34 @@ func Rotate(tile Tile) Tile {
   tile.b = Reverse(tile.r)
   tile.r = tmp
 
+  // Rotate the data as well
+  for y := 0; y < len(tile.data); y++ {
+    for x := y; x < len(tile.data[y]); x++ {
+      tile.data[y][x], tile.data[x][y] = tile.data[x][y], tile.data[y][x]
+    }
+  }
+  for y := 0; y < len(tile.data); y++ {
+    for x := 0; x < len(tile.data[y]) / 2; x++ {
+      opp := len(tile.data[y]) - x - 1
+      tile.data[y][x], tile.data[y][opp] = tile.data[y][opp], tile.data[y][x]
+    }
+  }
+
   return tile
 }
 
 func TileMatch(tile Tile, top string, left string) bool {
   return (top == "" || tile.t == top) &&
          (left == "" || tile.l == left)
+}
+
+func PrintTile (tile Tile) {
+  fmt.Println("Tile: ", tile.id)
+  for _, line := range tile.data {
+    fmt.Println(line)
+  }
+  fmt.Println("top: ", tile.t)
+  fmt.Println("rig: ", tile.r)
+  fmt.Println("bot: ", tile.b)
+  fmt.Println("lef: ", tile.l)
 }
