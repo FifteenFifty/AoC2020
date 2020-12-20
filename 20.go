@@ -1737,7 +1737,6 @@ Tile 3691:
 .....#....
 ##.###...#`
 
-/*
   input = `Tile 2311:
 ..##.#..#.
 ##..#.....
@@ -1845,7 +1844,6 @@ Tile 3079:
 ..#.###...
 ..#.......
 ..#.###...`
-*/
 
 tiles := []Tile {}
 
@@ -1856,7 +1854,7 @@ tiles := []Tile {}
   fmt.Printf("There are %d tiles\n", len(tiles))
 
   p1 := P1(tiles)
-  p2 := P2(input)
+  p2 := P2(tiles)
 
   fmt.Printf("P1: %d, P2: %d\n", p1, p2)
 }
@@ -1940,14 +1938,82 @@ func P1 (tiles []Tile) int {
     if borders == 12 {
       ret *= tile.id
     }
-
-    fmt.Printf("%d has %d borders\n", tile.id, borders)
   }
 
   return ret
 }
 
-func ArrangeTiles(tiles []Tile) [][]Tile {
+func P2 (tiles []Tile) int {
+  ret := 1
+
+  borderCounts := make(map[string]int)
+
+  for _, tile := range tiles {
+    borderCounts[tile.t]++
+    borderCounts[tile.r]++
+    borderCounts[tile.b]++
+    borderCounts[tile.l]++
+
+    borderCounts[Reverse(tile.t)]++
+    borderCounts[Reverse(tile.r)]++
+    borderCounts[Reverse(tile.b)]++
+    borderCounts[Reverse(tile.l)]++
+  }
+
+  var corner int
+  leftBorder := ""
+  topBorder := ""
+
+  for idx, tile := range tiles {
+    borders := borderCounts[tile.t] +
+               borderCounts[tile.r] +
+               borderCounts[tile.b] +
+               borderCounts[tile.l]
+    if borders == 6 {
+      if borderCounts[tile.t] == 1 {
+        if leftBorder == "" {
+          leftBorder = tile.t
+        } else {
+          topBorder = tile.t
+        }
+      }
+      if borderCounts[tile.r] == 1 {
+        if leftBorder == "" {
+          leftBorder = tile.r
+        } else {
+          topBorder = tile.r
+        }
+      }
+      if borderCounts[tile.b] == 1 {
+        if leftBorder == "" {
+          leftBorder = tile.b
+        } else {
+          topBorder = tile.b
+        }
+      }
+      if borderCounts[tile.l] == 1 {
+        if leftBorder == "" {
+          leftBorder = tile.l
+        } else {
+          topBorder = tile.l
+        }
+      }
+      corner = idx
+      break
+    }
+  }
+
+  grid := ArrangeTiles(tiles, corner, leftBorder, topBorder)
+
+  fmt.Println(grid)
+
+  return ret
+}
+
+func ArrangeTiles(tiles      []Tile,
+                  cornerIdx  int,
+                  leftBorder string,
+                  topBorder  string) [][]Tile {
   gridSize := int(math.Sqrt(float64(len(tiles))))
 
   // Start with an empty grid
@@ -1956,32 +2022,119 @@ func ArrangeTiles(tiles []Tile) [][]Tile {
     grid[i] = make([]Tile, gridSize)
   }
 
-  // Put all of the tiles in
+  // Rotate the corner tile so that it fits
+  cornerTile := TryTile(tiles[cornerIdx], topBorder, leftBorder)
+  if cornerTile.id == 0 {
+    cornerTile = TryTile(tiles[cornerIdx], Reverse(topBorder), leftBorder)
+  }
+
+  // Put in the top left tile
+  grid[0][0] = cornerTile
+
+  // Remove the tile from the list
+  tiles = Remove(tiles, cornerIdx)
+
+  topBorder    = ""
+  leftBorder   = ""
+
+  // Put in all the other tiles
+  for y := 0; y < gridSize; y++ {
+    for x := 0; x < gridSize; x++ {
+      if x > 0 {
+        leftBorder = grid[y][x - 1].r
+      }
+
+      if y > 0 {
+        topBorder = grid[y - 1][x].b
+      }
+
+      if x == 0 && y == 0 {
+        // We've put in the first
+        continue
+      }
+
+      for i, tile := range tiles {
+        tile = TryTile(tile, topBorder, leftBorder)
+        if tile.id != 0 {
+          // The tile fits
+          grid[y][x] = tile
+          tiles = Remove(tiles, i)
+          break
+        }
+      }
+
+      leftBorder = ""
+      topBorder = ""
+    }
+  }
+
 
   return grid
 }
 
-func MatchedBorders(tiles []Tile, matchIdx int) int {
-  check          := tiles[matchIdx]
-  matchedBorders := 0
+func Remove(tiles []Tile, idx int) []Tile {
+  tiles[len(tiles) - 1], tiles[idx] = tiles[idx], tiles[len(tiles) -1]
+  return tiles[:len(tiles) - 1]
+}
 
-  for idx, tile := range tiles {
-    if idx == matchIdx {
-      continue
-    }
+func TryTile(tile Tile, top string, left string) Tile {
 
-    matchedBorders += MatchBorders(check, tile)
+  if TileMatch(tile, top, left) {
+    return tile
   }
 
-  return matchedBorders
+  for flipV := 0; flipV <= 1; flipV++ {
+    if flipV == 1 {
+      tile = FlipV(tile)
+    }
+    for flipH := 0; flipH <= 1; flipH++ {
+      if flipH == 1 {
+        tile = FlipH(tile)
+      }
+      for rotate := 0; rotate < 4; rotate++ {
+        tile = Rotate(tile)
+
+        if TileMatch(tile, top, left) {
+          return tile
+        }
+      }
+    }
+  }
+
+  return Tile {}
 }
 
-func MatchBorders(a Tile, b Tile) int {
-  return 1
+func FlipV(tile Tile) Tile {
+  tmp := tile.t
+  tile.t = tile.b
+  tile.b = tmp
+  tile.l = Reverse(tile.l)
+  tile.r = Reverse(tile.r)
+
+  return tile
 }
 
-func P2 (input string) int {
-  ret := 0
+func FlipH(tile Tile) Tile {
+  tmp := tile.l
+  tile.l = tile.r
+  tile.r = tmp
+  tile.t = Reverse(tile.t)
+  tile.b = Reverse(tile.b)
 
-  return ret
+  return tile
+}
+
+func Rotate(tile Tile) Tile {
+  tmp := tile.t
+  tile.t = Reverse(tile.l)
+  tile.l = tile.b
+  tile.b = Reverse(tile.r)
+  tile.r = tmp
+
+  return tile
+}
+
+func TileMatch(tile Tile, top string, left string) bool {
+  return (top == "" || tile.t == top) &&
+         (left == "" || tile.l == left)
 }
