@@ -1956,8 +1956,6 @@ func P1 (tiles []Tile) int {
 }
 
 func P2 (tiles []Tile) int {
-  ret := 0
-
   borderCounts := make(map[string]int)
 
   for _, tile := range tiles {
@@ -2032,6 +2030,8 @@ func P2 (tiles []Tile) int {
     fullPicture[i] = make([]string, len(fullPicture))
   }
 
+  hashCount := 0
+
   for y := 0; y < len(grid); y++ {
     for x := 0; x < len(grid[y]); x++ {
       for dY := 0; dY < len(grid[y][x].data); dY++ {
@@ -2040,21 +2040,59 @@ func P2 (tiles []Tile) int {
           fpX := x * len(grid[0][0].data) + dX
 
           fullPicture[fpY][fpX] = grid[y][x].data[dY][dX]
+
+          if fullPicture[fpY][fpX] == "#" {
+            hashCount++
+          }
         }
       }
     }
   }
 
-  return MonsterCount(fullPicture)
+  monsterCount := MonsterCount(fullPicture)
+
+  if monsterCount == 0 {
+    // Use the Tile functions to rotate the array
+    tile      := Tile {}
+    tile.data = fullPicture
+    FlipV(tile)
+
+    // Turns out we didn't need any more
+
+    monsterCount = MonsterCount(fullPicture)
+  }
+
+  return hashCount - (monsterCount * 15)
 }
 
-func MonsterCount([][]string picture) int {
+func MonsterCount(picture [][]string) int {
   head := regexp.MustCompile("..................#.")
   body := regexp.MustCompile("#....##....##....###")
-  head := regexp.MustCompile(".#..#..#..#..#..#...")
-  //TODO
-  //
-  return 1
+  tail := regexp.MustCompile(".#..#..#..#..#..#...")
+
+  monsters := 0
+
+  for idx, line := range picture {
+    if idx == 0 || idx == len(picture) - 1 {
+      continue
+    }
+
+    lineStr := strings.Join(line, "")
+
+    bodyPos := body.FindAllStringIndex(lineStr, -1)
+    if bodyPos != nil {
+      for _, pos := range bodyPos {
+        prevLine := strings.Join(picture[idx - 1][pos[0]:pos[1]], "")
+        nextLine := strings.Join(picture[idx + 1][pos[0]:pos[1]], "")
+
+        if head.MatchString(prevLine) && tail.MatchString(nextLine) {
+          monsters++
+        }
+      }
+    }
+  }
+
+  return monsters
 }
 
 func ArrangeTiles(tiles      []Tile,
@@ -2215,15 +2253,4 @@ func Rotate(tile Tile) Tile {
 func TileMatch(tile Tile, top string, left string) bool {
   return (top == "" || tile.t == top) &&
          (left == "" || tile.l == left)
-}
-
-func PrintTile (tile Tile) {
-  fmt.Println("Tile: ", tile.id)
-  for _, line := range tile.data {
-    fmt.Println(line)
-  }
-  fmt.Println("top: ", tile.t)
-  fmt.Println("rig: ", tile.r)
-  fmt.Println("bot: ", tile.b)
-  fmt.Println("lef: ", tile.l)
 }
