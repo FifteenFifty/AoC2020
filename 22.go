@@ -92,6 +92,9 @@ Player 2:
   }
 
   p1 := P1(p1Deck, p2Deck)
+
+  fmt.Println(p1Deck)
+  fmt.Println(p2Deck)
   p2 := P2(input)
 
   fmt.Printf("P1: %d, P2: %d\n", p1, p2)
