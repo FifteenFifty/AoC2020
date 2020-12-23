@@ -8,16 +8,26 @@ func main() {
   input := []int { 3,8,9,1,2,5,4,6,7, }
   input = []int { 3, 9, 8, 2, 5, 4, 7, 1, 6 }
 
-  p1 := P1(input, 100)
-  p2 := P2(input)
+  inputCopy := make([]int, len(input))
+  copy(inputCopy, input)
+
+  p1 := P1(inputCopy, 100)
+
+  for i := 10; i <= 1000000; i++ {
+    input = append(input, i)
+  }
+
+  p2 := P2(input, 10000000)
 
   fmt.Printf("P1: %d, P2: %d\n", p1, p2)
 }
 
 func P1 (input []int, moves int) int {
   ret := 0
-
   i := 0
+
+  end := len(input)
+
   for round := 0; round < moves; round++ {
     currentCup := input[i % len(input)]
 
@@ -60,7 +70,7 @@ func P1 (input []int, moves int) int {
       if destCup == currentCup || destCup == a || destCup == b || destCup == c {
         destCup--
         if destCup < 1 {
-          destCup = 9
+          destCup = end
         }
       } else {
         break
@@ -90,7 +100,7 @@ func P1 (input []int, moves int) int {
        } else {
          var e int
          input, e = Remove(input, 0)
-         input = Insert(input, 8, e)
+         input = Insert(input, end - 1, e)
        }
      }
   }
@@ -102,7 +112,7 @@ func P1 (input []int, moves int) int {
       break
     } else {
       input, e = Remove(input, 0)
-      input = Insert(input, 8, e)
+      input = Insert(input, end - 1, e)
     }
   }
 
@@ -115,10 +125,64 @@ func P1 (input []int, moves int) int {
   return ret
 }
 
-func P2 (input []int) int {
-  ret := 0
+type Cup struct {
+  val  int
+  next *Cup
+}
 
-  return ret
+func P2 (input []int, turns int) int {
+
+  // Element zero is wasted but we don't need to remember to subtract
+  cups := make([]Cup, len(input) + 1)
+  var prev *Cup
+
+  for _, val := range input {
+    cups[val] = Cup { val, nil }
+    if (prev != nil) {
+      prev.next = &cups[val]
+    }
+    prev = &cups[val]
+  }
+
+  // Complete the loop
+  current  := &cups[input[0]]
+  prev.next = current
+
+  for round := 0; round < turns; round++ {
+    // Pick up three
+    a := current.next
+    b := a.next
+    c := b.next
+
+    current.next = c.next
+
+    destCupVal := current.val - 1
+    for {
+      if destCupVal < 1 {
+        destCupVal = len(input)
+      }
+      if destCupVal == current.val || destCupVal == a.val || destCupVal == b.val || destCupVal == c.val {
+        destCupVal--
+      } else {
+        break
+      }
+    }
+
+    destCup := &cups[destCupVal]
+
+    // Place the cups to the right of the destination
+    c.next = destCup.next
+    destCup.next = a
+
+    current = current.next
+  }
+
+  // Result is the two cups following 1, multiplied together
+  pos1 := cups[1]
+  x := pos1.next.val
+  y := pos1.next.next.val
+
+  return x * y
 }
 
 
